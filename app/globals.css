@@ -1,0 +1,418 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 250 100% 99%;
+    --foreground: 250 10% 15%;
+
+    /* Card colors */
+    --card: 0 0% 100%;
+    --card-foreground: 250 10% 15%;
+    --card-hovered: 250 30% 99%;
+
+    /* Popover colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 10% 15%;
+
+    /* Primary colors */
+    --primary: 250 95% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --primary-light: 250 95% 90%;
+    --primary-light-foreground: 250 95% 30%;
+
+    --primary-dark: 250 95% 40%;
+    --primary-dark-foreground: 0 0% 100%;
+
+    /* Secondary colors */
+    --secondary: 250 30% 96%;
+    --secondary-foreground: 250 10% 30%;
+
+    /* Muted colors */
+    --muted: 250 20% 96%;
+    --muted-foreground: 250 10% 50%;
+
+    /* Accent colors */
+    --accent: 250 40% 96%;
+    --accent-foreground: 250 10% 15%;
+
+    /* Destructive colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border and input colors */
+    --border: 250 20% 92%;
+    --input: 250 20% 92%;
+    --ring: 250 95% 60%;
+
+    /* Success colors */
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning colors */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Info colors */
+    --info: 210 92% 45%;
+    --info-foreground: 0 0% 100%;
+
+    /* Radius */
+    --radius: 1rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* Sidebar colors */
+    --sidebar-background: 250 30% 99%;
+    --sidebar-foreground: 250 10% 30%;
+    --sidebar-muted: 250 20% 90%;
+    --sidebar-muted-foreground: 250 10% 50%;
+    --sidebar-accent: 250 40% 96%;
+    --sidebar-accent-foreground: 250 10% 15%;
+    --sidebar-border: 250 20% 92%;
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 250 20% 8%;
+    --foreground: 250 10% 95%;
+
+    /* Card colors */
+    --card: 250 20% 10%;
+    --card-foreground: 250 10% 95%;
+    --card-hovered: 250 20% 12%;
+
+    /* Popover colors */
+    --popover: 250 20% 10%;
+    --popover-foreground: 250 10% 95%;
+
+    /* Primary colors */
+    --primary: 250 95% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --primary-light: 250 70% 25%;
+    --primary-light-foreground: 250 95% 80%;
+
+    --primary-dark: 250 95% 45%;
+    --primary-dark-foreground: 0 0% 100%;
+
+    /* Secondary colors */
+    --secondary: 250 20% 18%;
+    --secondary-foreground: 250 10% 90%;
+
+    /* Muted colors */
+    --muted: 250 20% 16%;
+    --muted-foreground: 250 10% 70%;
+
+    /* Accent colors */
+    --accent: 250 20% 20%;
+    --accent-foreground: 250 10% 95%;
+
+    /* Destructive colors */
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border and input colors */
+    --border: 250 20% 20%;
+    --input: 250 20% 20%;
+    --ring: 250 95% 65%;
+
+    /* Success colors */
+    --success: 142 70% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning colors */
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Info colors */
+    --info: 210 92% 40%;
+    --info-foreground: 0 0% 100%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+
+    /* Sidebar colors */
+    --sidebar-background: 250 20% 12%;
+    --sidebar-foreground: 250 10% 90%;
+    --sidebar-muted: 250 20% 18%;
+    --sidebar-muted-foreground: 250 10% 70%;
+    --sidebar-accent: 250 20% 20%;
+    --sidebar-accent-foreground: 250 10% 95%;
+    --sidebar-border: 250 20% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-medium tracking-tight;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h4 {
+    @apply text-lg md:text-xl;
+  }
+
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  /* Card Styles */
+  .card {
+    @apply bg-card text-card-foreground rounded-xl border shadow-sm transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply shadow-md;
+  }
+
+  /* Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-dark;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Input Styles */
+  .input {
+    @apply flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Badge Styles */
+  .badge {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  .badge-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/80;
+  }
+
+  .badge-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  .badge-outline {
+    @apply border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Avatar Styles */
+  .avatar {
+    @apply relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full;
+  }
+
+  .avatar-sm {
+    @apply h-8 w-8;
+  }
+
+  .avatar-lg {
+    @apply h-12 w-12;
+  }
+
+  .avatar-xl {
+    @apply h-16 w-16;
+  }
+
+  /* Tooltip Styles */
+  .tooltip {
+    @apply z-50 overflow-hidden rounded-lg border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2;
+  }
+}
+
+/* Fix for dropdown positioning */
+.dropdown-menu-content {
+  z-index: 50;
+}
+
+/* Fix for drag and drop */
+[data-rbd-drag-handle-context-id] {
+  cursor: grab;
+}
+
+/* Remove any black backgrounds */
+.bg-black,
+[class*="bg-black"] {
+  background-color: transparent !important;
+}
+
+/* Fix for nested scrollable areas */
+.h-screen {
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* Ensure proper overflow handling */
+body,
+html {
+  overflow: hidden;
+}
+
+/* Fix for double scrollbars */
+.overflow-auto {
+  overflow: auto !important;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: thin; /* Firefox */
+}
+
+/* Customize scrollbar to be less intrusive */
+.overflow-auto::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.dark .overflow-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Verification badge */
+.verification-badge {
+  @apply flex items-center justify-center rounded-full bg-info text-info-foreground;
+  width: 16px;
+  height: 16px;
+}
+
+/* Chart styles */
+.chart-tooltip {
+  @apply rounded-lg border bg-popover p-2 shadow-md;
+}
+
+/* Animation utilities */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-in-out;
+}
+
+.animate-scale {
+  animation: scale 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Gradient backgrounds */
+.bg-gradient-purple {
+  background: linear-gradient(135deg, hsl(250, 95%, 65%) 0%, hsl(260, 95%, 60%) 100%);
+}
+
+.dark .bg-gradient-purple {
+  background: linear-gradient(135deg, hsl(250, 95%, 45%) 0%, hsl(260, 95%, 40%) 100%);
+}
+
+.bg-gradient-card {
+  background: linear-gradient(180deg, hsl(250, 30%, 99%) 0%, hsl(250, 30%, 97%) 100%);
+}
+
+.dark .bg-gradient-card {
+  background: linear-gradient(180deg, hsl(250, 20%, 12%) 0%, hsl(250, 20%, 10%) 100%);
+}
+
+/* Glass effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(30, 30, 46, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(60, 60, 80, 0.2);
+}

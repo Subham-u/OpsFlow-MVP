@@ -1,0 +1,27 @@
+/* Invoice Styles */
+.invoice-container {
+  --accent-color: #3b82f6;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-container,
+  .invoice-container * {
+    visibility: visible;
+  }
+
+  .invoice-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 40px;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

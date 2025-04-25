@@ -6,11 +6,11 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Search, Star, StarOff, List, LayoutGrid, Filter, SlidersHorizontal } from "lucide-react"
+import { Plus, Search, Star, StarOff, List, LayoutGrid, Filter, SlidersHorizontal, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { getProjects } from "@/lib/actions/project-actions"
+import { getProjects, createProject, deleteProject } from "@/lib/actions/project-actions"
 import { formatDate } from "@/lib/utils"
 import { toggleProjectStar } from "@/lib/actions/project-actions"
 import { Input } from "@/components/ui/input"
@@ -33,8 +33,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { motion } from "framer-motion"
 
+interface Project {
+  id: string
+  name: string
+  description?: string
+  status: string
+  due_date?: string
+  is_starred: boolean
+}
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([])
+  const [projects, setProjects] = useState<Project[]>([])
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -47,6 +56,8 @@ export default function ProjectsPage() {
   const [projectStatus, setProjectStatus] = useState("planning")
   const [projectDueDate, setProjectDueDate] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -79,9 +90,9 @@ export default function ProjectsPage() {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc")
   }
 
-  const handleCreateProject = () => {
-    // Validate form
-    if (!projectName) {
+  const handleCreateProject = async () => {
+    // Validate project name first
+    if (!projectName.trim()) {
       toast({
         title: "Error",
         description: "Project name is required",
@@ -90,27 +101,102 @@ export default function ProjectsPage() {
       return
     }
 
-    if (!projectDueDate) {
+    // Check for duplicate project name
+    const existingProject = projects.find(
+      (project) => project.name.toLowerCase() === projectName.trim().toLowerCase()
+    )
+    if (existingProject) {
       toast({
         title: "Error",
-        description: "Due date is required",
+        description: "A project with this name already exists",
         variant: "destructive",
       })
       return
     }
 
-    // In a real app, we would save the project to the database
-    toast({
-      title: "Success",
-      description: "Project created successfully",
-    })
+    setIsCreating(true)
+    const formData = new FormData()
+    formData.append("name", projectName.trim())
+    formData.append("description", projectDescription)
+    formData.append("status", projectStatus)
+    formData.append("due_date", projectDueDate)
 
-    // Reset form and close dialog
-    setProjectName("")
-    setProjectDescription("")
-    setProjectStatus("planning")
-    setProjectDueDate("")
-    setOpenNewProject(false)
+    try {
+      const result = await createProject(formData)
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Project created successfully",
+        })
+        setProjects([result.data, ...projects])
+        setOpenNewProject(false)
+        setProjectName("")
+        setProjectDescription("")
+        setProjectStatus("planning")
+        setProjectDueDate("")
+      } else {
+        // Check if error is due to duplicate name from database
+        if (result.error?.toLowerCase().includes("duplicate") || result.error?.toLowerCase().includes("already exists")) {
+          toast({
+            title: "Error",
+            description: "A project with this name already exists",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: result.error,
+            variant: "destructive",
+          })
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create project",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleDeleteProject = async (id: string) => {
+    if (!id || isDeleting === id) return
+
+    if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      return
+    }
+
+    setIsDeleting(id)
+    try {
+      const result = await deleteProject(id)
+      console.log(result);
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Project deleted successfully",
+        })
+        // Remove the deleted project from the state
+        setProjects(projects.filter(project => project.id !== id))
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete project",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(null)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -163,9 +249,9 @@ export default function ProjectsPage() {
         <h1 className="text-3xl font-bold">Projects</h1>
         <Dialog open={openNewProject} onOpenChange={setOpenNewProject}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> New Project
-            </Button>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> New Project
+          </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
@@ -221,7 +307,16 @@ export default function ProjectsPage() {
               <Button variant="outline" onClick={() => setOpenNewProject(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateProject}>Create Project</Button>
+              <Button onClick={handleCreateProject} disabled={isCreating}>
+                {isCreating ? (
+                  <>
+                    <span className="mr-2">Creating...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </>
+                ) : (
+                  "Create Project"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -391,7 +486,7 @@ export default function ProjectsPage() {
                         {project.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(project.due_date)}</TableCell>
+                    <TableCell>{project.due_date ? formatDate(project.due_date) : "No due date"}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{project.description}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -409,7 +504,26 @@ export default function ProjectsPage() {
                           <DropdownMenuItem>Edit Project</DropdownMenuItem>
                           <DropdownMenuItem>Share Project</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">Delete Project</DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            disabled={isDeleting === project.id}
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              handleDeleteProject(project.id)
+                            }}
+                          >
+                            {isDeleting === project.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </>
+                            )}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

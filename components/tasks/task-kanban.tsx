@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { TaskDetailButton } from "./task-detail-button"
 
 type Task = {
   id: string
@@ -81,6 +82,15 @@ export function TaskKanban({
       draggable
       onDragStart={(e) => handleDragStart(e, task.id)}
     >
+    <TaskDetailButton
+      key={task.id}
+      task={task}
+      onStatusChange={onStatusChange}
+      onPriorityChange={(taskId, newPriority) => {
+        // You would need to implement this function in the parent component
+        console.log(`Change priority of task ${taskId} to ${newPriority}`)
+      }}
+      >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-sm">{task.title}</CardTitle>
@@ -148,6 +158,7 @@ export function TaskKanban({
           </DropdownMenuContent>
         </DropdownMenu>
       </CardFooter>
+      </TaskDetailButton>
     </Card>
   )
 

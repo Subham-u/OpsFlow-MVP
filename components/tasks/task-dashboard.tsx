@@ -48,9 +48,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { TaskTable } from "@/components/task-table"
-import { TaskKanban } from "@/components/task-kanban"
-import { TaskTimeline } from "@/components/task-timeline"
+import { TaskTable } from "@/components/tasks/task-table"
+import { TaskKanban } from "@/components/tasks/task-kanban"
+import { TaskTimeline } from "@/components/tasks/task-timeline"
+import { TaskDetailButton } from "./task-detail-button"
 
 // Import the server actions
 import { updateTaskStatus, updateTaskAssignee } from "@/lib/actions/task-actions"
@@ -102,7 +103,7 @@ type TaskFormData = {
 }
 
 // View types
-type ViewType = "grid" | "table" | "kanban" | "timeline"
+type ViewType = "grid" | "table" | "kanban" 
 
 export function TaskDashboard({
   initialTasks,
@@ -694,14 +695,14 @@ export function TaskDashboard({
         >
           <Columns className="h-4 w-4" />
         </Button>
-        <Button
+        {/* <Button
           variant={viewType === "timeline" ? "default" : "outline"}
           size="sm"
           onClick={() => setViewType("timeline")}
           className="w-10 h-10 p-0"
         >
           <Timeline className="h-4 w-4" />
-        </Button>
+        </Button> */}
       </div>
 
       {/* Task views */}
@@ -741,7 +742,7 @@ export function TaskDashboard({
           />
         )}
 
-        {viewType === "timeline" && (
+        {/* {viewType === "timeline" && (
           <TaskTimeline
             tasks={filteredTasks}
             getPriorityColor={getPriorityColor}
@@ -750,7 +751,7 @@ export function TaskDashboard({
             onDelete={openDeleteDialog}
             onAssign={openAssignDialog}
           />
-        )}
+        )} */}
       </div>
 
       {/* Create Task Dialog */}
@@ -1085,6 +1086,15 @@ function TaskGrid({
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {tasks.map((task) => (
         <Card key={task.id} className="h-full">
+          <TaskDetailButton
+                  key={task.id}
+                  task={task}
+                  onStatusChange={onStatusChange}
+                  onPriorityChange={(taskId, newPriority) => {
+                    // You would need to implement this function in the parent component
+                    console.log(`Change priority of task ${taskId} to ${newPriority}`)
+                  }}
+            >
           <CardHeader className="pb-2">
             <div className="flex justify-between items-start">
               <CardTitle className="text-lg">{task.title}</CardTitle>
@@ -1141,10 +1151,11 @@ function TaskGrid({
               </div>
             </div>
           </CardContent>
+          </TaskDetailButton>
           <CardFooter className="flex justify-between pt-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="outline" size="sm">
                   Status
                 </Button>
               </DropdownMenuTrigger>

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,7 @@ import { EditTaskDialog } from "@/components/tasks/edit-task-dialog"
 import { DeleteTaskDialog } from "@/components/tasks/delete-task-dialog"
 import { updateTaskStatus } from "@/lib/actions/task-actions"
 import { toast } from "@/components/ui/use-toast"
+import { TaskDetailButton } from "@/components/tasks/task-detail-button"
 
 interface TaskCardProps {
   task: any
@@ -98,89 +98,117 @@ export function TaskCard({ task }: TaskCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2">
-                <Link href={`/tasks/${task.id}`} className="font-semibold hover:underline">
-                  {task.title}
-                </Link>
-              </div>
-              {task.description && <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>}
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Badge className={`${getStatusColor(task.status)} font-medium`} variant="outline">
-                  {task.status}
-                </Badge>
-                <Badge className={`${getPriorityColor(task.priority)} font-medium`} variant="outline">
-                  {task.priority} Priority
-                </Badge>
-                {task.project && (
-                  <Badge variant="outline" className="font-medium">
-                    {task.project.name}
+      <TaskDetailButton
+        task={task}
+        onStatusChange={async (id, status) => {
+          setIsUpdating(true)
+          try {
+            const result = await updateTaskStatus(id, status)
+            if (result.success) {
+              toast({
+                title: "Task updated",
+                description: `Task status changed to ${status}`,
+              })
+            } else {
+              toast({
+                title: "Error",
+                description: result.error || "Failed to update task",
+                variant: "destructive",
+              })
+            }
+          } catch (error) {
+            toast({
+              title: "Error",
+              description: "An unexpected error occurred",
+              variant: "destructive",
+            })
+          } finally {
+            setIsUpdating(false)
+          }
+        }}
+      >
+        <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{task.title}</span>
+                </div>
+                {task.description && <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge className={`${getStatusColor(task.status)} font-medium`} variant="outline">
+                    {task.status}
                   </Badge>
-                )}
+                  <Badge className={`${getPriorityColor(task.priority)} font-medium`} variant="outline">
+                    {task.priority} Priority
+                  </Badge>
+                  {task.project && (
+                    <Badge variant="outline" className="font-medium">
+                      {task.project.name}
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                {task.status !== "Completed" && (
-                  <DropdownMenuItem onClick={handleMarkAsCompleted} disabled={isUpdating}>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Mark as Completed
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-600">
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
-          <div className="flex items-center text-xs text-muted-foreground">
-            {task.due_date ? (
-              <div className="flex items-center">
-                <Calendar className="mr-1 h-3.5 w-3.5" />
-                <span>Due {formatDate(task.due_date)}</span>
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <Clock className="mr-1 h-3.5 w-3.5" />
-                <span>No due date</span>
-              </div>
-            )}
-          </div>
-          <div>
-            {task.assignee ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Assigned to</span>
-                <Avatar className="h-6 w-6">
-                  <AvatarImage
-                    src={task.assignee.avatar || `/placeholder.svg?height=24&width=24&query=${task.assignee.name}`}
-                    alt={task.assignee.name}
-                  />
-                  <AvatarFallback className="text-xs">{getInitials(task.assignee.name)}</AvatarFallback>
-                </Avatar>
-              </div>
-            ) : (
-              <span className="text-xs text-muted-foreground">Unassigned</span>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
+                  {task.status !== "Completed" && (
+                    <DropdownMenuItem onClick={handleMarkAsCompleted} disabled={isUpdating}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Mark as Completed
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-600">
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between border-t p-4 bg-muted/50">
+            <div className="flex items-center text-xs text-muted-foreground">
+              {task.due_date ? (
+                <div className="flex items-center">
+                  <Calendar className="mr-1 h-3.5 w-3.5" />
+                  <span>Due {formatDate(task.due_date)}</span>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Clock className="mr-1 h-3.5 w-3.5" />
+                  <span>No due date</span>
+                </div>
+              )}
+            </div>
+            <div>
+              {task.assignee ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Assigned to</span>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage
+                      src={task.assignee.avatar || `/placeholder.svg?height=24&width=24&query=${task.assignee.name}`}
+                      alt={task.assignee.name}
+                    />
+                    <AvatarFallback className="text-xs">{getInitials(task.assignee.name)}</AvatarFallback>
+                  </Avatar>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Unassigned</span>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+      </TaskDetailButton>
 
       <EditTaskDialog task={task} open={showEditDialog} onOpenChange={setShowEditDialog} />
 

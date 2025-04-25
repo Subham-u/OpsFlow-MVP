@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion } from "framer-motion"
+import { deleteProject } from "@/lib/actions/project-actions"
 
 export function ProjectsGrid() {
   const { toast } = useToast()
@@ -158,18 +159,35 @@ export function ProjectsGrid() {
     setOpenNewProject(false)
   }
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     if (!selectedProject) return
 
-    setProjects(projects.filter((project) => project.id !== selectedProject.id))
-
-    toast({
-      title: "Project deleted",
-      description: "The project has been deleted successfully",
-    })
-
-    setOpenDeleteDialog(false)
-    setSelectedProject(null)
+    try {
+      const result = await deleteProject(selectedProject.id)
+      
+      if (result.success) {
+        setProjects(projects.filter((project) => project.id !== selectedProject.id))
+        toast({
+          title: "Success",
+          description: "Project deleted successfully",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete project",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive",
+      })
+    } finally {
+      setOpenDeleteDialog(false)
+      setSelectedProject(null)
+    }
   }
 
   const handleEditProject = () => {

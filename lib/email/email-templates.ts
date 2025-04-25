@@ -11,56 +11,136 @@ function createBaseTemplate(content: string) {
       <title>OpsFlow Notification</title>
       <style>
         body {
-          font-family: Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           line-height: 1.6;
-          color: #333;
+          color: #1a1a1a;
           margin: 0;
           padding: 0;
+          background-color: #f5f5f5;
         }
         .container {
           max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
+          margin: 20px auto;
+          background: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .header {
-          background-color: #f8f9fa;
-          padding: 20px;
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          padding: 32px 20px;
           text-align: center;
-          border-bottom: 1px solid #e9ecef;
+        }
+        .header h1 {
+          color: #ffffff;
+          margin: 0;
+          font-size: 24px;
+          font-weight: 600;
+          letter-spacing: -0.025em;
         }
         .content {
-          padding: 20px;
+          padding: 32px 24px;
+        }
+        .content h2 {
+          color: #111827;
+          font-size: 20px;
+          font-weight: 600;
+          margin-top: 0;
+          margin-bottom: 24px;
+        }
+        .content p {
+          color: #374151;
+          margin-bottom: 16px;
+        }
+        .content ul {
+          list-style: none;
+          padding: 0;
+          margin: 20px 0;
+          background: #f9fafb;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .content ul li {
+          padding: 12px 16px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .content ul li:last-child {
+          border-bottom: none;
+        }
+        .content ul li strong {
+          color: #4b5563;
+          margin-right: 8px;
         }
         .footer {
-          background-color: #f8f9fa;
-          padding: 20px;
+          background-color: #f9fafb;
+          padding: 24px 20px;
           text-align: center;
           font-size: 12px;
-          color: #6c757d;
-          border-top: 1px solid #e9ecef;
+          color: #6b7280;
+          border-top: 1px solid #e5e7eb;
         }
         .button {
           display: inline-block;
-          padding: 10px 20px;
-          background-color: #007bff;
-          color: white;
+          padding: 12px 24px;
+          background: #4f46e5;
+          color: white !important;
           text-decoration: none;
-          border-radius: 4px;
-          margin-top: 15px;
+          border-radius: 6px;
+          font-weight: 500;
+          margin-top: 24px;
+          text-align: center;
+          transition: background-color 0.2s;
+        }
+        .button:hover {
+          background: #4338ca;
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 500;
+          text-transform: uppercase;
+        }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .status-approved { background-color: #dcfce7; color: #166534; }
+        .status-rejected { background-color: #fee2e2; color: #991b1b; }
+        .meta-info {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #e5e7eb;
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .highlight-box {
+          background: #f0f9ff;
+          border-left: 4px solid #3b82f6;
+          padding: 16px;
+          margin: 24px 0;
+          border-radius: 0 8px 8px 0;
+        }
+        @media (max-width: 600px) {
+          .container {
+            margin: 0;
+            border-radius: 0;
+          }
+          .content {
+            padding: 24px 16px;
+          }
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>Project Management</h1>
+          <h1>🚀 OpsFlow</h1>
         </div>
         <div class="content">
           ${content}
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Project Management Tool. All rights reserved.</p>
-          <p>This is an automated message, please do not reply directly to this email.</p>
+          <p>© ${new Date().getFullYear()} OpsFlow. All rights reserved.</p>
+          <p style="margin-top: 8px; opacity: 0.8;">This is an automated message, please do not reply.</p>
         </div>
       </div>
     </body>
@@ -71,17 +151,21 @@ function createBaseTemplate(content: string) {
 // New team member template
 export function getNewTeamMemberTemplate(member: any, addedBy: User) {
   const content = `
-    <h2>New Team Member Added</h2>
-    <p>A new team member has been added to your organization:</p>
+    <h2>👋 Welcome New Team Member!</h2>
+    <div class="highlight-box">
+      <p>We're excited to welcome <strong>${member.name}</strong> to our organization!</p>
+    </div>
     <ul>
       <li><strong>Name:</strong> ${member.name}</li>
       <li><strong>Email:</strong> ${member.email}</li>
-      <li><strong>Role:</strong> ${member.role}</li>
+      <li><strong>Role:</strong> <span class="status-badge" style="background-color: #e0e7ff; color: #3730a3;">${member.role}</span></li>
       <li><strong>Department:</strong> ${member.department || "Not specified"}</li>
-      <li><strong>Status:</strong> ${member.status}</li>
+      <li><strong>Status:</strong> <span class="status-badge status-approved">${member.status}</span></li>
     </ul>
-    <p>Added by: ${addedBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/team" class="button">View Team</a>
+    <div class="meta-info">
+      Added by ${addedBy.name}
+    </div>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/team" class="button">View Team →</a>
   `
   return createBaseTemplate(content)
 }
@@ -107,18 +191,42 @@ export function getTaskAssignedTemplate(task: any, assignee: any, assignedBy: Us
 
 // Task status update template
 export function getTaskStatusUpdateTemplate(task: any, updatedBy: User, projectName: string, oldStatus: string) {
+  const getStatusBadgeStyle = (status: string) => {
+    const styles = {
+      'todo': { bg: '#f3f4f6', color: '#374151' },
+      'in-progress': { bg: '#e0f2fe', color: '#0369a1' },
+      'review': { bg: '#fef3c7', color: '#92400e' },
+      'done': { bg: '#dcfce7', color: '#166534' }
+    } as const
+
+    const normalizedStatus = status.toLowerCase()
+    return (normalizedStatus in styles ? styles[normalizedStatus as keyof typeof styles] : styles.todo)
+  }
+
   const content = `
-    <h2>Task Status Updated</h2>
-    <p>A task status has been updated:</p>
+    <h2>📋 Task Status Updated</h2>
+    <div class="highlight-box">
+      <p>The status of task <strong>${task.title}</strong> has been updated.</p>
+    </div>
     <ul>
       <li><strong>Task:</strong> ${task.title}</li>
       <li><strong>Project:</strong> ${projectName}</li>
-      <li><strong>Old Status:</strong> ${oldStatus}</li>
-      <li><strong>New Status:</strong> ${task.status}</li>
+      <li>
+        <strong>Status Change:</strong> 
+        <span class="status-badge" style="background: ${getStatusBadgeStyle(oldStatus).bg}; color: ${getStatusBadgeStyle(oldStatus).color}">
+          ${oldStatus}
+        </span>
+        →
+        <span class="status-badge" style="background: ${getStatusBadgeStyle(task.status).bg}; color: ${getStatusBadgeStyle(task.status).color}">
+          ${task.status}
+        </span>
+      </li>
       <li><strong>Due Date:</strong> ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "Not specified"}</li>
     </ul>
-    <p>Updated by: ${updatedBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/tasks/${task.id}" class="button">View Task</a>
+    <div class="meta-info">
+      Updated by ${updatedBy.name}
+    </div>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/tasks/${task.id}" class="button">View Task →</a>
   `
   return createBaseTemplate(content)
 }
@@ -126,17 +234,21 @@ export function getTaskStatusUpdateTemplate(task: any, updatedBy: User, projectN
 // New project template
 export function getNewProjectTemplate(project: any, createdBy: User) {
   const content = `
-    <h2>New Project Created</h2>
-    <p>A new project has been created:</p>
+    <h2>🎉 New Project Created</h2>
+    <div class="highlight-box">
+      <p>A new project <strong>${project.name}</strong> has been created and is ready for collaboration!</p>
+    </div>
     <ul>
       <li><strong>Project Name:</strong> ${project.name}</li>
       <li><strong>Description:</strong> ${project.description || "No description provided"}</li>
       <li><strong>Start Date:</strong> ${project.start_date ? new Date(project.start_date).toLocaleDateString() : "Not specified"}</li>
       <li><strong>End Date:</strong> ${project.end_date ? new Date(project.end_date).toLocaleDateString() : "Not specified"}</li>
-      <li><strong>Status:</strong> ${project.status}</li>
+      <li><strong>Status:</strong> <span class="status-badge" style="background-color: #ddd6fe; color: #5b21b6;">${project.status}</span></li>
     </ul>
-    <p>Created by: ${createdBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project</a>
+    <div class="meta-info">
+      Created by ${createdBy.name}
+    </div>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project →</a>
   `
   return createBaseTemplate(content)
 }
@@ -144,17 +256,21 @@ export function getNewProjectTemplate(project: any, createdBy: User) {
 // Project member added template
 export function getProjectMemberAddedTemplate(project: any, member: any, addedBy: User, role: string) {
   const content = `
-    <h2>Added to Project</h2>
-    <p>You have been added to a project:</p>
+    <h2>🤝 Welcome to the Project!</h2>
+    <div class="highlight-box">
+      <p>You have been added to <strong>${project.name}</strong> as a <strong>${role}</strong>.</p>
+    </div>
     <ul>
       <li><strong>Project Name:</strong> ${project.name}</li>
       <li><strong>Description:</strong> ${project.description || "No description provided"}</li>
-      <li><strong>Your Role:</strong> ${role}</li>
+      <li><strong>Your Role:</strong> <span class="status-badge" style="background-color: #e0e7ff; color: #3730a3;">${role}</span></li>
       <li><strong>Start Date:</strong> ${project.start_date ? new Date(project.start_date).toLocaleDateString() : "Not specified"}</li>
       <li><strong>End Date:</strong> ${project.end_date ? new Date(project.end_date).toLocaleDateString() : "Not specified"}</li>
     </ul>
-    <p>Added by: ${addedBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project</a>
+    <div class="meta-info">
+      Added by ${addedBy.name}
+    </div>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project →</a>
   `
   return createBaseTemplate(content)
 }
@@ -162,16 +278,20 @@ export function getProjectMemberAddedTemplate(project: any, member: any, addedBy
 // Milestone completed template
 export function getMilestoneCompletedTemplate(project: any, milestone: any, completedBy: User) {
   const content = `
-    <h2>Project Milestone Completed</h2>
-    <p>A milestone has been completed in one of your projects:</p>
+    <h2>🎯 Milestone Achieved!</h2>
+    <div class="highlight-box">
+      <p>A significant milestone has been completed in project <strong>${project.name}</strong>!</p>
+    </div>
     <ul>
       <li><strong>Project:</strong> ${project.name}</li>
       <li><strong>Milestone:</strong> ${milestone.title}</li>
       <li><strong>Description:</strong> ${milestone.description || "No description provided"}</li>
-      <li><strong>Completed Date:</strong> ${new Date().toLocaleDateString()}</li>
+      <li><strong>Completion Date:</strong> <span class="status-badge status-approved">${new Date().toLocaleDateString()}</span></li>
     </ul>
-    <p>Completed by: ${completedBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project</a>
+    <div class="meta-info">
+      Completed by ${completedBy.name}
+    </div>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/projects/${project.id}" class="button">View Project →</a>
   `
   return createBaseTemplate(content)
 }
@@ -185,16 +305,29 @@ export function getCommentAddedTemplate(
   projectName?: string,
 ) {
   const content = `
-    <h2>New Comment Added</h2>
-    <p>A new comment has been added to a ${entityType}:</p>
+    <h2>💬 New Comment Added</h2>
+    <div class="highlight-box">
+      <p>A new comment has been added to ${entityType} <strong>${entityName}</strong></p>
+    </div>
     <ul>
       <li><strong>${entityType === "project" ? "Project" : "Task"}:</strong> ${entityName}</li>
       ${projectName ? `<li><strong>Project:</strong> ${projectName}</li>` : ""}
-      <li><strong>Comment:</strong> "${comment.content}"</li>
+      <li>
+        <strong>Comment:</strong>
+        <div style="margin-top: 8px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #e5e7eb;">
+          "${comment.content}"
+        </div>
+      </li>
       <li><strong>Date:</strong> ${new Date(comment.created_at).toLocaleString()}</li>
     </ul>
-    <p>Comment by: ${commentedBy.name}</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"}/${entityType}s/${comment[`${entityType}_id`]}" class="button">View ${entityType === "project" ? "Project" : "Task"}</a>
+    <div class="meta-info">
+      Comment by ${commentedBy.name}
+    </div>
+    <a href="${
+      process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com"
+    }/${entityType}s/${comment[`${entityType}_id`]}" class="button">View ${
+    entityType === "project" ? "Project" : "Task"
+  } →</a>
   `
   return createBaseTemplate(content)
 }

@@ -26,6 +26,7 @@ import {
   Zap,
   Smile,
   ThumbsUp,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -79,7 +80,11 @@ import {
   addProjectMilestone,
   toggleMilestoneStatus,
   addProjectComment,
+  updateProject,
 } from "@/lib/actions/project-actions"
+
+import { getTeamMembers } from "@/lib/actions/team-actions"
+import { getCurrentUser } from "@/lib/actions/user-actions"
 
 type ProjectMember = {
   id: string
@@ -93,18 +98,18 @@ type ProjectTask = {
   id: string
   title: string
   description: string
-  status: "todo" | "in-progress" | "review" | "done"
-  assignee: {
-    name: string
-    avatar: string
-    initials: string
-  }
-  dueDate: string
-  priority: "low" | "medium" | "high"
-  timeTracked: number // in seconds
+  status: "done" | "todo" | "in-progress" | "review"
+  priority: string
+  due_date: string
+  assigned_to: string
+  timeTracked: number
   isTracking: boolean
   comments: ProjectComment[]
-  checklist: { id: string; text: string; completed: boolean }[]
+  checklist: {
+    id: string
+    text: string
+    completed: boolean
+  }[]
 }
 
 type ProjectFile = {
@@ -173,10 +178,33 @@ type Project = {
   }
 }
 
+interface TeamMember {
+  id: string
+  name: string
+  role: string
+}
+
+interface Task {
+  id: string
+  title: string
+  description: string
+  status: string
+  priority: string
+  due_date: string
+  assigned_to: string
+}
+
+interface UpdateProjectData {
+  tasks?: {
+    items: ProjectTask[]
+  }
+}
+
 export function ProjectDetails({ id }: { id: string }) {
   const { toast } = useToast()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [openTaskDialog, setOpenTaskDialog] = useState(false)
   const [openMemberDialog, setOpenMemberDialog] = useState(false)
   const [openRiskDialog, setOpenRiskDialog] = useState(false)
@@ -186,7 +214,7 @@ export function ProjectDetails({ id }: { id: string }) {
   const [taskAssignee, setTaskAssignee] = useState("")
   const [taskDueDate, setTaskDueDate] = useState("")
   const [taskPriority, setTaskPriority] = useState("medium")
-  const [memberEmail, setMemberEmail] = useState("")
+  const [selectedMemberId, setSelectedMemberId] = useState("")
   const [memberRole, setMemberRole] = useState("member")
   const [riskTitle, setRiskTitle] = useState("")
   const [riskImpact, setRiskImpact] = useState<"low" | "medium" | "high">("medium")
@@ -206,19 +234,29 @@ export function ProjectDetails({ id }: { id: string }) {
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null)
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isAddingMember, setIsAddingMember] = useState(false)
+  const [isAddingTask, setIsAddingTask] = useState(false)
+  const [isDeletingTask, setIsDeletingTask] = useState(false)
+  const [isUpdatingTask, setIsUpdatingTask] = useState(false)
 
   // Fetch project data
   useEffect(() => {
-    const fetchProject = async () => {
-      setLoading(true)
+    const fetchData = async () => {
       try {
         const projectData = await getProjectById(id)
         setProject(projectData)
+
+        const teamMembersData = await getTeamMembers()
+        // Filter out members who are already in the project
+        const availableMembers = teamMembersData.filter(
+          (member: TeamMember) => !projectData.members.some((projectMember: TeamMember) => projectMember.id === member.id)
+        )
+        setTeamMembers(availableMembers)
       } catch (error) {
-        console.error("Error fetching project:", error)
+        console.error("Error fetching data:", error)
         toast({
           title: "Error",
-          description: "Failed to load project details",
+          description: "Failed to load project data",
           variant: "destructive",
         })
       } finally {
@@ -226,7 +264,7 @@ export function ProjectDetails({ id }: { id: string }) {
       }
     }
 
-    fetchProject()
+    fetchData()
   }, [id, toast])
 
   // Time tracking interval
@@ -296,6 +334,7 @@ export function ProjectDetails({ id }: { id: string }) {
       return
     }
 
+    setIsAddingTask(true)
     try {
       const result = await addTask(project!.id, {
         title: taskTitle,
@@ -312,9 +351,27 @@ export function ProjectDetails({ id }: { id: string }) {
           description: "The task has been added successfully",
         })
 
-        // Refresh project data
-        const updatedProject = await getProjectById(id)
-        setProject(updatedProject)
+        // Update local state immediately
+        setProject(prev => prev ? {
+          ...prev,
+          tasks: {
+            ...prev.tasks,
+            total: prev.tasks.total + 1,
+            items: [...prev.tasks.items, {
+              id: result.taskId,
+              title: taskTitle,
+              description: taskDescription,
+              status: "todo",
+              priority: taskPriority,
+              due_date: taskDueDate,
+              assigned_to: taskAssignee,
+              timeTracked: 0,
+              isTracking: false,
+              comments: [],
+              checklist: []
+            }]
+          }
+        } : null)
 
         // Reset form and close dialog
         setTaskTitle("")
@@ -337,14 +394,16 @@ export function ProjectDetails({ id }: { id: string }) {
         description: "An unexpected error occurred",
         variant: "destructive",
       })
+    } finally {
+      setIsAddingTask(false)
     }
   }
 
   const handleAddMember = async () => {
-    if (!memberEmail) {
+    if (!selectedMemberId) {
       toast({
         title: "Error",
-        description: "Email is required",
+        description: "Please select a team member",
         variant: "destructive",
       })
       return
@@ -359,35 +418,48 @@ export function ProjectDetails({ id }: { id: string }) {
       return
     }
 
-    try {
-      // In a real app, we would look up the team member by email
-      // For now, we'll use a mock member ID
-      const mockMemberId = "00000000-0000-0000-0000-000000000000"
+    // Check if member already exists in the project
+    if (project?.members.some(member => member.id === selectedMemberId)) {
+      toast({
+        title: "Error",
+        description: "This team member is already part of the project",
+        variant: "destructive",
+      })
+      return
+    }
 
+    setIsAddingMember(true)
+    try {
       const result = await addProjectMember(project!.id, {
-        member_id: mockMemberId,
-        role:
-          memberRole === "manager"
-            ? "Project Manager"
-            : memberRole === "developer"
-              ? "Developer"
-              : memberRole === "designer"
-                ? "Designer"
-                : "Team Member",
+        member_id: selectedMemberId,
+        role: memberRole === "manager" ? "Project Manager" : 
+              memberRole === "developer" ? "Developer" : 
+              memberRole === "designer" ? "Designer" : "Team Member",
       })
 
       if (result.success) {
         toast({
           title: "Member added",
-          description: `${memberEmail} has been added to the project`,
+          description: "Team member has been added to the project",
         })
 
-        // Refresh project data
-        const updatedProject = await getProjectById(id)
-        setProject(updatedProject)
+        // Update local state immediately
+        const newMember = teamMembers.find(member => member.id === selectedMemberId)
+        if (newMember) {
+          setProject(prev => prev ? {
+            ...prev,
+            members: [...prev.members, {
+              id: newMember.id,
+              name: newMember.name,
+              role: memberRole,
+              avatar: newMember.avatar || "/placeholder.svg",
+              initials: newMember.initials
+            }]
+          } : null)
+        }
 
         // Reset form and close dialog
-        setMemberEmail("")
+        setSelectedMemberId("")
         setMemberRole("member")
         setOpenMemberDialog(false)
       } else {
@@ -404,6 +476,8 @@ export function ProjectDetails({ id }: { id: string }) {
         description: "An unexpected error occurred",
         variant: "destructive",
       })
+    } finally {
+      setIsAddingMember(false)
     }
   }
 
@@ -519,6 +593,7 @@ export function ProjectDetails({ id }: { id: string }) {
   }
 
   const handleDeleteTask = async (taskId: string) => {
+    setIsDeletingTask(true)
     try {
       const result = await deleteTask(taskId, project!.id)
 
@@ -528,9 +603,16 @@ export function ProjectDetails({ id }: { id: string }) {
           description: "The task has been deleted successfully",
         })
 
-        // Refresh project data
-        const updatedProject = await getProjectById(id)
-        setProject(updatedProject)
+        // Update local state immediately
+        setProject(prev => prev ? {
+          ...prev,
+          tasks: {
+            ...prev.tasks,
+            total: prev.tasks.total - 1,
+            completed: prev.tasks.completed - (prev.tasks.items.find(t => t.id === taskId)?.status === "done" ? 1 : 0),
+            items: prev.tasks.items.filter(task => task.id !== taskId)
+          }
+        } : null)
 
         // Close task dialog if open
         if (selectedTask?.id === taskId) {
@@ -550,17 +632,19 @@ export function ProjectDetails({ id }: { id: string }) {
         description: "An unexpected error occurred",
         variant: "destructive",
       })
+    } finally {
+      setIsDeletingTask(false)
     }
   }
 
-  const handleTaskStatusChange = async (taskId: string, newStatus: "todo" | "in-progress" | "review" | "done") => {
+  const handleTaskStatusChange = async (task: Task, newStatus: string) => {
     try {
-      const result = await updateTaskStatus(taskId, project!.id, newStatus)
+      const result = await updateTaskStatus(task.id, project!.id, newStatus)
 
       if (result.success) {
         toast({
           title: "Task updated",
-          description: `Task status changed to ${newStatus.replace("-", " ")}`,
+          description: `Task status changed to ${newStatus}`,
         })
 
         // Refresh project data
@@ -568,8 +652,8 @@ export function ProjectDetails({ id }: { id: string }) {
         setProject(updatedProject)
 
         // Update selected task if open
-        if (selectedTask?.id === taskId) {
-          const updatedTask = updatedProject.tasks.items.find((task) => task.id === taskId)
+        if (selectedTask?.id === task.id) {
+          const updatedTask = updatedProject.tasks.items.find((t: Task) => t.id === task.id)
           if (updatedTask) {
             setSelectedTask(updatedTask)
           }
@@ -583,6 +667,141 @@ export function ProjectDetails({ id }: { id: string }) {
       }
     } catch (error) {
       console.error("Error updating task status:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleTaskPriorityChange = async (task: ProjectTask, newPriority: string) => {
+    try {
+      const formData = new FormData()
+      formData.append("tasks", JSON.stringify({
+        items: project!.tasks.items.map((t: ProjectTask) =>
+          t.id === task.id ? { ...t, priority: newPriority } : t
+        ),
+      }))
+
+      const result = await updateProject(project!.id, formData)
+
+      if (result.success) {
+        toast({
+          title: "Task updated",
+          description: `Task priority changed to ${newPriority}`,
+        })
+
+        // Refresh project data
+        const updatedProject = await getProjectById(id)
+        setProject(updatedProject)
+
+        // Update selected task if open
+        if (selectedTask?.id === task.id) {
+          const updatedTask = updatedProject.tasks.items.find((t: ProjectTask) => t.id === task.id)
+          if (updatedTask) {
+            setSelectedTask(updatedTask)
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update task priority",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating task priority:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleTaskDueDateChange = async (task: ProjectTask, newDueDate: string) => {
+    try {
+      const formData = new FormData()
+      formData.append("tasks", JSON.stringify({
+        items: project!.tasks.items.map((t: ProjectTask) =>
+          t.id === task.id ? { ...t, due_date: newDueDate } : t
+        ),
+      }))
+
+      const result = await updateProject(project!.id, formData)
+
+      if (result.success) {
+        toast({
+          title: "Task updated",
+          description: `Task due date changed to ${newDueDate}`,
+        })
+
+        // Refresh project data
+        const updatedProject = await getProjectById(id)
+        setProject(updatedProject)
+
+        // Update selected task if open
+        if (selectedTask?.id === task.id) {
+          const updatedTask = updatedProject.tasks.items.find((t: ProjectTask) => t.id === task.id)
+          if (updatedTask) {
+            setSelectedTask(updatedTask)
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update task due date",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating task due date:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleTaskAssigneeChange = async (task: ProjectTask, newAssignee: string) => {
+    try {
+      const formData = new FormData()
+      formData.append("tasks", JSON.stringify({
+        items: project!.tasks.items.map((t: ProjectTask) =>
+          t.id === task.id ? { ...t, assigned_to: newAssignee } : t
+        ),
+      }))
+
+      const result = await updateProject(project!.id, formData)
+
+      if (result.success) {
+        toast({
+          title: "Task updated",
+          description: `Task assignee changed to ${newAssignee}`,
+        })
+
+        // Refresh project data
+        const updatedProject = await getProjectById(id)
+        setProject(updatedProject)
+
+        // Update selected task if open
+        if (selectedTask?.id === task.id) {
+          const updatedTask = updatedProject.tasks.items.find((t: ProjectTask) => t.id === task.id)
+          if (updatedTask) {
+            setSelectedTask(updatedTask)
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update task assignee",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating task assignee:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -642,12 +861,22 @@ export function ProjectDetails({ id }: { id: string }) {
     }
 
     try {
-      // In a real app, we would use the current user's ID
-      const mockUserId = "00000000-0000-0000-0000-000000000000"
+      // Get the current user's ID from your auth system
+      // This should be replaced with your actual auth implementation
+      const currentUser = await getCurrentUser()
+      console.log(currentUser)
+      if (!currentUser) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add comments",
+          variant: "destructive",
+        })
+        return
+      }
 
       const result = await addTaskComment(taskId, project!.id, {
         text: commentText,
-        user_id: mockUserId,
+        user_id: currentUser.id, // Use the actual user ID
       })
 
       if (result.success) {
@@ -656,16 +885,51 @@ export function ProjectDetails({ id }: { id: string }) {
           description: "Your comment has been added to the task",
         })
 
-        // Refresh project data
-        const updatedProject = await getProjectById(id)
-        setProject(updatedProject)
+        // Update local state immediately
+        setProject(prev => prev ? {
+          ...prev,
+          tasks: {
+            ...prev.tasks,
+            items: prev.tasks.items.map(task => {
+              if (task.id === taskId) {
+                return {
+                  ...task,
+                  comments: [...task.comments, {
+                    id: result.commentId,
+                    text: commentText,
+                    user: {
+                      id: currentUser.id,
+                      name: currentUser.name,
+                      avatar: currentUser.avatar || "/placeholder.svg",
+                      initials: currentUser.initials || currentUser.name.substring(0, 2).toUpperCase()
+                    },
+                    timestamp: new Date().toISOString(),
+                    reactions: []
+                  }]
+                }
+              }
+              return task
+            })
+          }
+        } : null)
 
         // Update selected task if open
         if (selectedTask?.id === taskId) {
-          const updatedTask = updatedProject.tasks.items.find((task) => task.id === taskId)
-          if (updatedTask) {
-            setSelectedTask(updatedTask)
-          }
+          setSelectedTask(prev => prev ? {
+            ...prev,
+            comments: [...prev.comments, {
+              id: result.commentId,
+              text: commentText,
+              user: {
+                id: currentUser.id,
+                name: currentUser.name,
+                avatar: currentUser.avatar || "/placeholder.svg",
+                initials: currentUser.initials || currentUser.name.substring(0, 2).toUpperCase()
+              },
+              timestamp: new Date().toISOString(),
+              reactions: []
+            }]
+          } : null)
         }
 
         setCommentText("")
@@ -692,12 +956,21 @@ export function ProjectDetails({ id }: { id: string }) {
     }
 
     try {
-      // In a real app, we would use the current user's ID
-      const mockUserId = "00000000-0000-0000-0000-000000000000"
+      // Get the current user's ID from your auth system
+      // This should be replaced with your actual auth implementation
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add comments",
+          variant: "destructive",
+        })
+        return
+      }
 
       const result = await addProjectComment(project!.id, {
         text: projectComment,
-        user_id: mockUserId,
+        user_id: currentUser.id, // Use the actual user ID
       })
 
       if (result.success) {
@@ -706,9 +979,22 @@ export function ProjectDetails({ id }: { id: string }) {
           description: "Your comment has been added to the project",
         })
 
-        // Refresh project data
-        const updatedProject = await getProjectById(id)
-        setProject(updatedProject)
+        // Update local state immediately
+        setProject(prev => prev ? {
+          ...prev,
+          comments: [...prev.comments, {
+            id: result.commentId,
+            text: projectComment,
+            user: {
+              id: currentUser.id,
+              name: currentUser.name,
+              avatar: currentUser.avatar || "/placeholder.svg",
+              initials: currentUser.initials || currentUser.name.substring(0, 2).toUpperCase()
+            },
+            timestamp: new Date().toISOString(),
+            reactions: []
+          }]
+        } : null)
 
         setProjectComment("")
       } else {
@@ -1335,7 +1621,16 @@ export function ProjectDetails({ id }: { id: string }) {
                           <Button variant="outline" onClick={() => setOpenTaskDialog(false)}>
                             Cancel
                           </Button>
-                          <Button onClick={handleAddTask}>Add Task</Button>
+                          <Button onClick={handleAddTask} disabled={isAddingTask}>
+                            {isAddingTask ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              "Add Task"
+                            )}
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -1361,7 +1656,7 @@ export function ProjectDetails({ id }: { id: string }) {
                                   <Checkbox
                                     checked={task.status === "done"}
                                     onCheckedChange={(checked) => {
-                                      handleTaskStatusChange(task.id, checked ? "done" : "todo")
+                                      handleTaskStatusChange(task, checked ? "done" : "todo")
                                     }}
                                   />
                                   <div>
@@ -1383,10 +1678,7 @@ export function ProjectDetails({ id }: { id: string }) {
                               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-6 w-6">
-                                    <AvatarImage
-                                      src={task.assignee.avatar || "/placeholder.svg"}
-                                      alt={task.assignee.name}
-                                    />
+                                    <AvatarImage src={task.assignee.avatar || "/placeholder.svg"} alt={task.assignee.name} />
                                     <AvatarFallback>{task.assignee.initials}</AvatarFallback>
                                   </Avatar>
                                   <span className="text-sm">{task.assignee.name}</span>
@@ -1446,10 +1738,7 @@ export function ProjectDetails({ id }: { id: string }) {
                                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
                                   <div className="mt-2 flex items-center justify-between">
                                     <Avatar className="h-5 w-5">
-                                      <AvatarImage
-                                        src={task.assignee.avatar || "/placeholder.svg"}
-                                        alt={task.assignee.name}
-                                      />
+                                      <AvatarImage src={task.assignee.avatar || "/placeholder.svg"} alt={task.assignee.name} />
                                       <AvatarFallback>{task.assignee.initials}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex items-center text-xs text-muted-foreground">
@@ -1846,18 +2135,24 @@ export function ProjectDetails({ id }: { id: string }) {
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                       <DialogTitle>Add Team Member</DialogTitle>
-                      <DialogDescription>Invite a new member to join this project.</DialogDescription>
+                      <DialogDescription>Select a team member to add to this project.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="member-email">Email</Label>
-                        <Input
-                          id="member-email"
-                          type="email"
-                          placeholder="Enter email address"
-                          value={memberEmail}
-                          onChange={(e) => setMemberEmail(e.target.value)}
-                        />
+                        <Label htmlFor="member-select">Team Member</Label>
+                        <select
+                          id="member-select"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={selectedMemberId}
+                          onChange={(e) => setSelectedMemberId(e.target.value)}
+                        >
+                          <option value="">Select a team member</option>
+                          {teamMembers.map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.name} ({member.role})
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="member-role">Role</Label>
@@ -1878,7 +2173,16 @@ export function ProjectDetails({ id }: { id: string }) {
                       <Button variant="outline" onClick={() => setOpenMemberDialog(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleAddMember}>Add Member</Button>
+                      <Button onClick={handleAddMember} disabled={isAddingMember}>
+                        {isAddingMember ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          "Add Member"
+                        )}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -2002,10 +2306,7 @@ export function ProjectDetails({ id }: { id: string }) {
                   <p className="text-muted-foreground">Assignee</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage
-                        src={selectedTask.assignee.avatar || "/placeholder.svg"}
-                        alt={selectedTask.assignee.name}
-                      />
+                      <AvatarImage src={selectedTask.assignee.avatar || "/placeholder.svg"} alt={selectedTask.assignee.name} />
                       <AvatarFallback>{selectedTask.assignee.initials}</AvatarFallback>
                     </Avatar>
                     <span>{selectedTask.assignee.name}</span>
@@ -2023,7 +2324,7 @@ export function ProjectDetails({ id }: { id: string }) {
                   <select
                     className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={selectedTask.status}
-                    onChange={(e) => handleTaskStatusChange(selectedTask.id, e.target.value as any)}
+                    onChange={(e) => handleTaskStatusChange(selectedTask, e.target.value)}
                   >
                     <option value="todo">To Do</option>
                     <option value="in-progress">In Progress</option>
@@ -2165,8 +2466,18 @@ export function ProjectDetails({ id }: { id: string }) {
                   handleDeleteTask(selectedTask.id)
                   setSelectedTask(null)
                 }}
+                disabled={isDeletingTask}
               >
-                <Trash className="mr-2 h-4 w-4" /> Delete Task
+                {isDeletingTask ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash className="mr-2 h-4 w-4" /> Delete Task
+                  </>
+                )}
               </Button>
               <Button onClick={() => setSelectedTask(null)}>Close</Button>
             </DialogFooter>
